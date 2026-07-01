@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { getWCFContent } from "@/lib/contentLoader";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { SignOutButton } from "@/components/auth/SignOutButton";
+import { ReadingApp } from "@/components/reading/ReadingApp";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -12,15 +13,7 @@ export default async function Home() {
     return <LoginForm />;
   }
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-        <span className="text-sm text-gray-600">Signed in as {user.email}</span>
-        <SignOutButton />
-      </header>
-      <main className="flex flex-1 items-center justify-center p-8 text-center text-gray-500">
-        Reading view coming next.
-      </main>
-    </div>
-  );
+  const content = await getWCFContent();
+
+  return <ReadingApp content={content} userId={user.id} userEmail={user.email!} />;
 }

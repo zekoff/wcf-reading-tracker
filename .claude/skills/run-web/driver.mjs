@@ -25,6 +25,33 @@ const COMMANDS = {
     console.log("launched:", page.url());
   },
 
+  // Bypasses email delivery/rate limits for test logins: given an
+  // access_token + refresh_token pair (e.g. from
+  // supabase.auth.admin.generateLink() server-side -- see the hash
+  // fragment in its action_link), establish a real session using the same
+  // @supabase/ssr cookie-based client our app uses, so the server-side
+  // session check in app/page.tsx sees a logged-in user. Args:
+  // "<access_token> <refresh_token>".
+  async "login-as"(args) {
+    if (!page) return console.log("ERROR: launch first");
+    const [access_token, refresh_token] = args.split(" ");
+    const result = await page.evaluate(
+      async ({ url, key, access_token, refresh_token }) => {
+        const mod = await import("https://esm.sh/@supabase/ssr@0.12.0");
+        const supabase = mod.createBrowserClient(url, key);
+        const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+        return { error: error ? error.message : null, hasSession: !!data.session };
+      },
+      {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        access_token,
+        refresh_token,
+      }
+    );
+    console.log("login-as:", JSON.stringify(result));
+  },
+
   async nav(url) {
     if (!page) return console.log("ERROR: launch first");
     await page.goto(url, { waitUntil: "domcontentloaded" });
