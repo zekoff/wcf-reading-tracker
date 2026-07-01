@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { flushPendingChanges, resetAndClearQueue, syncMarkSectionComplete } from "@/lib/syncManager";
 
 function key(chapter: number, section: number) {
   return `${chapter}:${section}`;
@@ -9,10 +10,9 @@ function key(chapter: number, section: number) {
 
 // SPEC.md §3.2/§6: fetch once, then listen for realtime changes so other
 // devices' writes show up automatically. Marking/resetting go through
-// mark_section_complete / a scoped delete, both RLS-enforced server-side.
-// Online-first for now -- lib/syncManager.ts (added later) will take over
-// the actual write path to add offline queueing without changing this
-// hook's public shape.
+// mark_section_complete / a scoped delete (both RLS-enforced server-side),
+// via lib/syncManager.ts so a failed write queues in IndexedDB instead of
+// being lost, and gets flushed on reconnect.
 export function useReadingProgress(userId: string) {
   const supabase = useMemo(() => createClient(), []);
   const [progress, setProgress] = useState<Map<string, boolean>>(new Map());
@@ -74,6 +74,18 @@ export function useReadingProgress(userId: string) {
     };
   }, [supabase, userId]);
 
+  // Flush any changes queued while offline: once now (covers a session that
+  // ended offline and reopened already-connected) and again on every
+  // 'online' transition.
+  useEffect(() => {
+    flushPendingChanges(supabase);
+    const handleOnline = () => flushPendingChanges(supabase);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [supabase]);
+
   const isComplete = useCallback(
     (chapter: number, section: number) => progress.get(key(chapter, section)) ?? false,
     [progress]
@@ -86,25 +98,16 @@ export function useReadingProgress(userId: string) {
         next.set(key(chapter, section), completed);
         return next;
       });
-      const { error } = await supabase.rpc("mark_section_complete", {
-        p_chapter: chapter,
-        p_section: section,
-        p_completed: completed,
-      });
-      if (error) {
-        console.error("mark_section_complete failed", error);
-      }
+      await syncMarkSectionComplete(supabase, chapter, section, completed);
     },
     [supabase]
   );
 
   const resetProgress = useCallback(async () => {
     setProgress(new Map());
-    const { error } = await supabase
-      .from("reading_progress")
-      .delete()
-      .eq("user_id", userId);
-    if (error) {
+    try {
+      await resetAndClearQueue(supabase, userId);
+    } catch (error) {
       console.error("reset progress failed", error);
     }
   }, [supabase, userId]);
