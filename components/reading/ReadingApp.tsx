@@ -8,7 +8,8 @@ import { ReadingView } from "@/components/reading/ReadingView";
 import { ChapterPicker } from "@/components/reading/ChapterPicker";
 import { ProgressBar } from "@/components/reading/ProgressBar";
 import { ResetConfirmation } from "@/components/reading/ResetConfirmation";
-import { SignOutButton } from "@/components/auth/SignOutButton";
+import { AccountMenu } from "@/components/reading/AccountMenu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface ReadingAppProps {
   content: WCFContent;
@@ -111,15 +112,9 @@ function ReadingAppLoaded({
           </button>
           <ProgressBar completed={completedCount} total={flat.length} />
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setResetOpen(true)}
-            className="text-sm text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          >
-            Reset
-          </button>
-          <span className="text-sm text-gray-600 dark:text-gray-400">{userEmail}</span>
-          <SignOutButton />
+        <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
+          <AccountMenu userEmail={userEmail} onReset={() => setResetOpen(true)} />
         </div>
       </header>
 

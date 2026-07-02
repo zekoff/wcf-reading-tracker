@@ -23,16 +23,17 @@ function useHasMounted() {
   );
 }
 
-// Rendered once from app/layout.tsx so it's present on every route without
-// duplicating it per-page. Fixed bottom-right is empty space on all of
-// them: ReadingApp's own header fills the top of the viewport, and
-// LoginForm/auth-code-error content is vertically centered.
+// Rendered in-flow by each top-level page (ReadingApp's header, LoginForm,
+// auth-code-error) rather than as one viewport-fixed element -- a fixed
+// position risks colliding with different content on each page (it used to
+// sit on top of ReadingView's "Next" button on narrow/short viewports).
+// Callers position it via a wrapping element.
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useHasMounted();
 
   if (!mounted) {
-    return <div className="fixed bottom-4 right-4 z-40 h-9 w-20" aria-hidden />;
+    return <div className="h-9 w-20" aria-hidden />;
   }
 
   const isDark = resolvedTheme === "dark";
@@ -41,7 +42,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="fixed bottom-4 right-4 z-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+      className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
     >
       {isDark ? "Light mode" : "Dark mode"}
     </button>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
@@ -35,7 +36,10 @@ export function LoginForm() {
 
   if (status === "sent") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-8 text-center">
+      <div className="relative flex min-h-screen flex-col items-center justify-center gap-2 p-8 text-center">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
         <h1 className="text-xl font-semibold">Check your email</h1>
         <p className="text-gray-600 dark:text-gray-400">
           We sent a sign-in link to <span className="font-medium">{email}</span>.
@@ -45,7 +49,10 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8">
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-8">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
