@@ -105,13 +105,23 @@ const COMMANDS = {
     if (page) await page.keyboard.press(key);
   },
 
-  async wait(sel) {
+  // A bare number sleeps for that many ms; anything else waits for the
+  // selector to appear (up to 10s). Previously a plain number like "1000"
+  // was passed straight to waitForSelector, which can't match a numeric
+  // tag name -- so it silently burned the full 10s timeout every time
+  // instead of sleeping for the requested duration.
+  async wait(arg) {
     if (!page) return console.log("ERROR: launch first");
+    if (/^\d+$/.test(arg.trim())) {
+      await page.waitForTimeout(Number(arg));
+      console.log("slept:", arg + "ms");
+      return;
+    }
     try {
-      await page.waitForSelector(sel, { timeout: 10_000 });
-      console.log("found:", sel);
+      await page.waitForSelector(arg, { timeout: 10_000 });
+      console.log("found:", arg);
     } catch {
-      console.log("TIMEOUT:", sel);
+      console.log("TIMEOUT:", arg);
     }
   },
 
