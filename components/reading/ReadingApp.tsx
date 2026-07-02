@@ -64,6 +64,7 @@ function ReadingAppLoaded({
   const [currentIndex, setCurrentIndex] = useState(() => findResumeIndex(flat, isComplete));
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isResetOpen, setResetOpen] = useState(false);
+  const [isResetting, setResetting] = useState(false);
 
   const section = flat[currentIndex];
   const completedCount = flat.filter((s) => isComplete(s.chapter, s.section)).length;
@@ -119,9 +120,12 @@ function ReadingAppLoaded({
 
       <ResetConfirmation
         isOpen={isResetOpen}
+        isDeleting={isResetting}
         onCancel={() => setResetOpen(false)}
         onConfirm={async () => {
+          setResetting(true);
           await resetProgress();
+          setResetting(false);
           setResetOpen(false);
           setCurrentIndex(0);
         }}
