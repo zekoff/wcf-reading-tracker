@@ -30,9 +30,11 @@ export function flattenSections(content: WCFContent): FlatSection[] {
   return flat;
 }
 
-// SPEC.md §5.1: land on the first unread section, or the very first
-// section if the user has no progress yet, or the last section if
-// everything is already complete.
+// SPEC.md §5.1: fallback for a user with no recorded reading position yet
+// (see ReadingApp.tsx's lastPosition/updatePosition, which take precedence
+// once a position has been recorded) -- land on the first unread section,
+// or the very first section if the user has no progress yet, or the last
+// section if everything is already complete.
 export function findResumeIndex(
   flat: FlatSection[],
   isComplete: (chapter: number, section: number) => boolean

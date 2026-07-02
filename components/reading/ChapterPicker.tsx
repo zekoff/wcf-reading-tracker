@@ -41,14 +41,14 @@ export function ChapterPicker({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
       <div
-        className="flex h-full w-full max-w-sm flex-col overflow-y-auto bg-white p-4 sm:w-96"
+        className="flex h-full w-full max-w-sm flex-col overflow-y-auto bg-white p-4 sm:w-96 dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Chapters</h2>
           <button
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+            className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
             aria-label="Close"
           >
             Close
@@ -63,7 +63,7 @@ export function ChapterPicker({
                 onToggle={(e) => toggleChapter(chapter.number, e.currentTarget.open)}
               >
                 <summary
-                  className="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                  className="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800"
                   onClick={(e) => {
                     e.preventDefault();
                     toggleChapter(chapter.number, !openChapters.has(chapter.number));
@@ -72,12 +72,12 @@ export function ChapterPicker({
                 >
                   {chapter.number}. {chapter.title}
                 </summary>
-                <ul className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-gray-200 pl-3">
+                <ul className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-gray-200 pl-3 dark:border-gray-700">
                   {chapter.sections.map((section) => (
                     <li key={section.number}>
                       <button
                         onClick={() => onSelect(chapter.number, section.number)}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-gray-600 hover:bg-gray-50"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                       >
                         <span className="w-4 shrink-0">
                           {isComplete(chapter.number, section.number) ? "✓" : ""}

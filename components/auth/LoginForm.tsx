@@ -37,7 +37,7 @@ export function LoginForm() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-8 text-center">
         <h1 className="text-xl font-semibold">Check your email</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           We sent a sign-in link to <span className="font-medium">{email}</span>.
         </p>
       </div>
@@ -52,7 +52,7 @@ export function LoginForm() {
       >
         <div className="text-center">
           <h1 className="text-xl font-semibold">WCF Reading Tracker</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Sign in with your email to track your progress.
           </p>
         </div>
@@ -62,17 +62,17 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-gray-400"
         />
         <button
           type="submit"
           disabled={status === "sending"}
-          className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
           {status === "sending" ? "Sending..." : "Send magic link"}
         </button>
         {status === "error" && (
-          <p className="text-sm text-red-600">{errorMessage}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
         )}
       </form>
     </div>

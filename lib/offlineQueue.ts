@@ -8,23 +8,43 @@ export interface PendingChange {
   markedCompleteAt: string; // ISO timestamp, becomes p_marked_complete_at
 }
 
+export interface PendingPosition {
+  chapter: number;
+  section: number;
+  updatedAt: string; // ISO timestamp, becomes p_updated_at
+}
+
 interface WCFDB extends DBSchema {
   pendingChanges: {
     key: number;
     value: PendingChange;
   };
+  pendingPosition: {
+    key: string;
+    value: PendingPosition;
+  };
 }
+
+const POSITION_KEY = "current";
 
 let dbPromise: Promise<IDBPDatabase<WCFDB>> | null = null;
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<WCFDB>("wcf-reading-tracker", 1, {
-      upgrade(db) {
-        db.createObjectStore("pendingChanges", {
-          keyPath: "id",
-          autoIncrement: true,
-        });
+    dbPromise = openDB<WCFDB>("wcf-reading-tracker", 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          db.createObjectStore("pendingChanges", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+        }
+        if (oldVersion < 2) {
+          // Out-of-line key (fixed POSITION_KEY) since only the single most
+          // recent position matters -- a new write simply overwrites the
+          // previous pending one, unlike ordered completion toggles.
+          db.createObjectStore("pendingPosition");
+        }
       },
     });
   }
@@ -55,4 +75,22 @@ export async function removePendingChange(id: number) {
 export async function clearPendingChanges() {
   const db = await getDB();
   await db.clear("pendingChanges");
+}
+
+// SPEC.md §5.1: offline queue for the current reading position, mirroring
+// addPendingChange/getPendingChanges above but as a single overwrite-latest
+// slot rather than a list, since only the most recent position matters.
+export async function setPendingPosition(position: PendingPosition) {
+  const db = await getDB();
+  await db.put("pendingPosition", position, POSITION_KEY);
+}
+
+export async function getPendingPosition(): Promise<PendingPosition | undefined> {
+  const db = await getDB();
+  return db.get("pendingPosition", POSITION_KEY);
+}
+
+export async function clearPendingPosition() {
+  const db = await getDB();
+  await db.delete("pendingPosition", POSITION_KEY);
 }

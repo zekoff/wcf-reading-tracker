@@ -2,10 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { flushPendingChanges, resetAndClearQueue, syncMarkSectionComplete } from "@/lib/syncManager";
+import {
+  flushPendingChanges,
+  flushPendingPosition,
+  resetAndClearQueue,
+  syncMarkSectionComplete,
+  syncReadingPosition,
+} from "@/lib/syncManager";
 
 function key(chapter: number, section: number) {
   return `${chapter}:${section}`;
+}
+
+interface Position {
+  chapter: number;
+  section: number;
 }
 
 // SPEC.md §3.2/§6: fetch once, then listen for realtime changes so other
@@ -16,25 +27,39 @@ function key(chapter: number, section: number) {
 export function useReadingProgress(userId: string) {
   const supabase = useMemo(() => createClient(), []);
   const [progress, setProgress] = useState<Map<string, boolean>>(new Map());
+  const [lastPosition, setLastPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("reading_progress")
-        .select("chapter, section, completed")
-        .eq("user_id", userId);
+      const [{ data, error }, { data: userRow, error: userError }] = await Promise.all([
+        supabase
+          .from("reading_progress")
+          .select("chapter, section, completed")
+          .eq("user_id", userId),
+        supabase
+          .from("users")
+          .select("current_chapter, current_section")
+          .eq("id", userId)
+          .single(),
+      ]);
       if (!active) return;
       if (error) {
         console.error("failed to load reading progress", error);
+      }
+      if (userError) {
+        console.error("failed to load reading position", userError);
       }
       const map = new Map<string, boolean>();
       for (const row of data ?? []) {
         map.set(key(row.chapter, row.section), row.completed);
       }
       setProgress(map);
+      if (userRow?.current_chapter != null && userRow?.current_section != null) {
+        setLastPosition({ chapter: userRow.current_chapter, section: userRow.current_section });
+      }
       setLoading(false);
     })();
 
@@ -79,7 +104,11 @@ export function useReadingProgress(userId: string) {
   // 'online' transition.
   useEffect(() => {
     flushPendingChanges(supabase);
-    const handleOnline = () => flushPendingChanges(supabase);
+    flushPendingPosition(supabase);
+    const handleOnline = () => {
+      flushPendingChanges(supabase);
+      flushPendingPosition(supabase);
+    };
     window.addEventListener("online", handleOnline);
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -112,5 +141,12 @@ export function useReadingProgress(userId: string) {
     }
   }, [supabase, userId]);
 
-  return { progress, loading, isComplete, markComplete, resetProgress };
+  const updatePosition = useCallback(
+    async (chapter: number, section: number) => {
+      await syncReadingPosition(supabase, chapter, section);
+    },
+    [supabase]
+  );
+
+  return { progress, loading, isComplete, markComplete, resetProgress, lastPosition, updatePosition };
 }

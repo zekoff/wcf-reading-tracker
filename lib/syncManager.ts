@@ -2,8 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   addPendingChange,
   clearPendingChanges,
+  clearPendingPosition,
   getPendingChanges,
+  getPendingPosition,
   removePendingChange,
+  setPendingPosition,
 } from "@/lib/offlineQueue";
 
 async function attemptWrite(
@@ -74,4 +77,53 @@ export async function resetAndClearQueue(supabase: SupabaseClient, userId: strin
   await clearPendingChanges();
   const { error } = await supabase.from("reading_progress").delete().eq("user_id", userId);
   if (error) throw error;
+}
+
+async function attemptPositionWrite(
+  supabase: SupabaseClient,
+  chapter: number,
+  section: number,
+  updatedAt: string
+): Promise<boolean> {
+  const { error } = await supabase.rpc("update_reading_position", {
+    p_chapter: chapter,
+    p_section: section,
+    p_updated_at: updatedAt,
+  });
+  return !error;
+}
+
+// SPEC.md §5.1: persist "last viewed section" so a reload or another device
+// resumes exactly where the user left off, not just at the first incomplete
+// section. Same optimistic-write-then-queue-on-failure shape as
+// syncMarkSectionComplete.
+export async function syncReadingPosition(
+  supabase: SupabaseClient,
+  chapter: number,
+  section: number
+) {
+  const updatedAt = new Date().toISOString();
+  let ok: boolean;
+  try {
+    ok = await attemptPositionWrite(supabase, chapter, section, updatedAt);
+  } catch {
+    ok = false;
+  }
+  if (!ok) {
+    await setPendingPosition({ chapter, section, updatedAt });
+  }
+}
+
+// Flush a queued position on reconnect, same trigger points as
+// flushPendingChanges (mount + 'online' event).
+export async function flushPendingPosition(supabase: SupabaseClient) {
+  const pending = await getPendingPosition();
+  if (!pending) return;
+  let ok: boolean;
+  try {
+    ok = await attemptPositionWrite(supabase, pending.chapter, pending.section, pending.updatedAt);
+  } catch {
+    ok = false;
+  }
+  if (ok) await clearPendingPosition();
 }

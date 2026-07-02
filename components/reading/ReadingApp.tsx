@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { WCFContent } from "@/lib/contentLoader";
 import { flattenSections, findResumeIndex, type FlatSection } from "@/lib/wcfNavigation";
 import { useReadingProgress } from "@/hooks/useReadingProgress";
@@ -22,7 +22,7 @@ export function ReadingApp({ content, userId, userEmail }: ReadingAppProps) {
 
   if (progress.loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
+      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500 dark:text-gray-400">
         Loading your progress...
       </div>
     );
@@ -51,6 +51,8 @@ interface ReadingAppLoadedProps {
   isComplete: (chapter: number, section: number) => boolean;
   markComplete: (chapter: number, section: number, completed: boolean) => Promise<void>;
   resetProgress: () => Promise<void>;
+  lastPosition: { chapter: number; section: number } | null;
+  updatePosition: (chapter: number, section: number) => Promise<void>;
 }
 
 function ReadingAppLoaded({
@@ -60,14 +62,36 @@ function ReadingAppLoaded({
   isComplete,
   markComplete,
   resetProgress,
+  lastPosition,
+  updatePosition,
 }: ReadingAppLoadedProps) {
-  const [currentIndex, setCurrentIndex] = useState(() => findResumeIndex(flat, isComplete));
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (lastPosition) {
+      const idx = flat.findIndex(
+        (s) => s.chapter === lastPosition.chapter && s.section === lastPosition.section
+      );
+      if (idx !== -1) return idx;
+    }
+    return findResumeIndex(flat, isComplete);
+  });
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isResetOpen, setResetOpen] = useState(false);
   const [isResetting, setResetting] = useState(false);
 
   const section = flat[currentIndex];
   const completedCount = flat.filter((s) => isComplete(s.chapter, s.section)).length;
+
+  // Skip the write on mount -- currentIndex was just initialized from
+  // lastPosition (or the first-incomplete fallback), so re-syncing it
+  // immediately would be a same-value round trip on every load.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    updatePosition(section.chapter, section.section);
+  }, [section, updatePosition]);
 
   function selectSection(chapter: number, sectionNumber: number) {
     const idx = flat.findIndex((s) => s.chapter === chapter && s.section === sectionNumber);
@@ -77,11 +101,11 @@ function ReadingAppLoaded({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setPickerOpen(true)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             Chapters
           </button>
@@ -90,11 +114,11 @@ function ReadingAppLoaded({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setResetOpen(true)}
-            className="text-sm text-gray-500 hover:text-red-600"
+            className="text-sm text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
           >
             Reset
           </button>
-          <span className="text-sm text-gray-600">{userEmail}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">{userEmail}</span>
           <SignOutButton />
         </div>
       </header>
